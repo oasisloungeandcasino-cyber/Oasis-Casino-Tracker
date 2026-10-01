@@ -1,0 +1,830 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>Till Tracker</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Bebas+Neue&display=swap');
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body { background: #0d0d0d; color: #e8d5a3; font-family: 'DM Mono', 'Courier New', monospace; font-size: 14px; }
+  ::-webkit-scrollbar { width: 4px; } ::-webkit-scrollbar-track { background: #1a1a1a; } ::-webkit-scrollbar-thumb { background: #8b6914; }
+
+  #app { display: flex; flex-direction: column; min-height: 100vh; }
+  .header { border-bottom: 1px solid #2a2316; padding: 16px 20px 14px; display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 10px; }
+  .header-left .eyebrow { font-size: 0.6rem; letter-spacing: 0.3em; color: #6b5a2e; text-transform: uppercase; margin-bottom: 2px; }
+  .shift-title { font-family: 'Bebas Neue', sans-serif; font-size: 2.6rem; letter-spacing: 0.2em; color: #f0c040; line-height: 1; }
+  .header-right { display: flex; flex-direction: column; gap: 7px; align-items: flex-end; }
+  .header-inputs { display: flex; gap: 7px; flex-wrap: wrap; justify-content: flex-end; }
+  .header-btns { display: flex; gap: 7px; }
+
+  .tabs { border-bottom: 1px solid #2a2316; display: flex; padding: 0 20px; overflow-x: auto; }
+  .tab-btn { background: none; border: none; border-bottom: 2px solid transparent; color: #6b5a2e; cursor: pointer; font-family: 'Bebas Neue', sans-serif; font-size: 1rem; letter-spacing: 0.12em; padding: 10px 14px; transition: all 0.2s; white-space: nowrap; }
+  .tab-btn.active { color: #f0c040; border-bottom-color: #f0c040; }
+  .tab-btn:hover { color: #e8d5a3; }
+  .badge { background: #8b6914; border-radius: 50%; color: #0d0d0d; display: inline-flex; align-items: center; justify-content: center; font-size: 0.6rem; font-weight: bold; height: 16px; margin-left: 5px; width: 16px; }
+
+  .content { padding: 18px 20px; max-width: 620px; margin: 0 auto; width: 100%; }
+  .tab-panel { display: none; } .tab-panel.active { display: block; }
+
+  .card { background: #161410; border: 1px solid #2a2316; border-radius: 4px; padding: 16px 18px; margin-bottom: 13px; }
+
+  .lbl { color: #6b5a2e; display: block; font-size: 0.68rem; letter-spacing: 0.15em; margin-bottom: 5px; text-transform: uppercase; }
+  input[type=text], input[type=number], input[type=date], select, textarea {
+    background: #1c1a14; border: 1px solid #3a3020; border-radius: 3px;
+    color: #f0c040; font-family: 'DM Mono', monospace; font-size: 0.9rem;
+    outline: none; padding: 8px 12px; transition: border 0.2s; width: 100%;
+  }
+  input[type=date] { color-scheme: dark; }
+  input:focus, select:focus, textarea:focus { border-color: #8b6914; }
+  input::placeholder, textarea::placeholder { color: #4a3f20; }
+  select { appearance: none; }
+  textarea { resize: vertical; min-height: 72px; line-height: 1.5; }
+
+  .btn { background: #8b6914; border: none; border-radius: 3px; color: #0d0d0d; cursor: pointer; font-family: 'Bebas Neue', sans-serif; font-size: 0.95rem; letter-spacing: 0.1em; padding: 8px 18px; transition: background 0.2s; }
+  .btn:hover { background: #f0c040; }
+  .btn-ghost { background: #1e1c14; border: 1px solid #3a3020; color: #8b6914; }
+  .btn-ghost:hover { background: #2a2810; color: #f0c040; }
+  .btn-danger { background: #3a1a1a; border: 1px solid #5a2020; color: #c05050; }
+  .btn-danger:hover { background: #5a2020; color: #ff6b6b; }
+  .btn-print { background: #1e1c14; border: 1px solid #3a3020; color: #f0c040; font-size: 0.8rem; padding: 6px 12px; }
+  .btn-print:hover { background: #2a2810; }
+  .btn-sm { font-size: 0.8rem; padding: 5px 12px; }
+  .btn-xs { font-size: 0.7rem; padding: 3px 8px; }
+
+  .row { display: flex; gap: 9px; align-items: flex-end; flex-wrap: wrap; }
+  .row > .field { flex: 1; min-width: 110px; }
+  .row > .btn { flex-shrink: 0; }
+
+  .big-num { font-family: 'Bebas Neue', sans-serif; font-size: 2.1rem; letter-spacing: 0.05em; color: #f0c040; }
+  .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 11px; margin-bottom: 13px; }
+  .stat-box { background: #161410; border: 1px solid #2a2316; border-radius: 4px; padding: 14px 16px; text-align: center; }
+  .stat-box .big-num { font-size: 1.8rem; }
+  .stat-sub { color: #4a3f20; font-size: 0.68rem; margin-top: 2px; }
+
+  .expected-card { background: #111008; border: 1px solid #3a3010; border-radius: 4px; padding: 16px 18px; margin-bottom: 13px; }
+  .expected-card .big-num { font-size: 2.6rem; }
+  hr.divider { border: none; border-top: 1px solid #2a2316; margin: 13px 0; }
+  .calc-row { display: flex; justify-content: space-between; font-size: 0.76rem; color: #6b5a2e; line-height: 2; }
+
+  .item { align-items: center; border-bottom: 1px solid #1e1c14; display: flex; justify-content: space-between; padding: 8px 0; font-size: 0.85rem; }
+  .item:last-child { border-bottom: none; }
+  .item-meta { color: #4a3f20; font-size: 0.65rem; margin-top: 2px; }
+  .item-right { align-items: center; display: flex; gap: 10px; flex-shrink: 0; }
+  .chip { background: #1e1c10; border: 1px solid #3a3010; border-radius: 2px; color: #a08030; display: inline-block; font-size: 0.65rem; letter-spacing: 0.1em; padding: 2px 7px; }
+  .chip-blue { background: #0e1a2a; border-color: #1a3a5a; color: #5090c0; }
+
+  .safe-row { margin-bottom: 13px; }
+  .safe-label-row { align-items: center; display: flex; justify-content: space-between; font-size: 0.78rem; margin-bottom: 4px; }
+  .safe-label { color: #8b6914; }
+  .safe-edit-btn { background: none; border: 1px dashed #3a3020; border-radius: 3px; color: #a08030; cursor: pointer; font-family: 'DM Mono', monospace; font-size: 0.82rem; padding: 2px 8px; transition: all 0.2s; }
+  .safe-edit-btn:hover { border-color: #8b6914; color: #f0c040; }
+  .safe-edit-btn .edit-icon { color: #4a3f20; font-size: 0.58rem; margin-left: 4px; }
+  .safe-edit-row { align-items: center; display: flex; gap: 6px; }
+  .safe-edit-row input { width: 100px; padding: 4px 8px; font-size: 0.82rem; }
+  .safe-bar { background: #2a2316; border-radius: 2px; height: 5px; margin-top: 3px; overflow: hidden; }
+  .safe-fill { border-radius: 2px; height: 100%; transition: width 0.5s; }
+  .safe-foot { display: flex; justify-content: space-between; font-size: 0.62rem; color: #3a3020; margin-top: 3px; }
+  .warn { color: #c07830; font-size: 0.68rem; }
+
+  .safe-section-title { font-family: 'Bebas Neue', sans-serif; font-size: 1rem; letter-spacing: 0.12em; color: #8b6914; margin-bottom: 10px; padding-bottom: 6px; border-bottom: 1px solid #2a2316; }
+  .backup-card { background: #0e0e18; border: 1px solid #1a2040; }
+  .backup-card .safe-label { color: #5090c0; }
+  .backup-card .safe-edit-btn { color: #406080; border-color: #1a3050; }
+  .backup-card .safe-edit-btn:hover { color: #80c0f0; border-color: #5090c0; }
+  .backup-card .safe-bar { background: #1a2040; }
+
+  .notes-card { background: #0e140e; border: 1px solid #1a2a1a; }
+  .notes-card .lbl { color: #4a7a4a; }
+
+  .red { color: #c05050; } .green { color: #50c080; } .gold { color: #f0c040; }
+  .empty { color: #4a3f20; font-size: 0.82rem; padding: 28px 0; text-align: center; }
+  .section-hd { align-items: center; display: flex; justify-content: space-between; margin-bottom: 8px; }
+  .section-hd .lbl { margin-bottom: 0; }
+  .till-display { align-items: center; display: flex; justify-content: space-between; }
+
+  @media (max-width: 480px) {
+    .shift-title { font-size: 2rem; }
+    .header { padding: 12px 14px 12px; }
+    .content { padding: 14px 14px; }
+    .tabs { padding: 0 10px; }
+    .tab-btn { padding: 9px 10px; font-size: 0.85rem; }
+  }
+
+  #printArea { display: none; }
+
+  @media print {
+    body { background: #fff !important; color: #1a1a1a !important; }
+    #app { display: none !important; }
+    #printArea {
+      display: block !important;
+      font-family: 'DM Mono', monospace;
+      font-size: 12px;
+      padding: 10px;
+    }
+    .p-hdr { border-bottom: 3px solid #1a1a1a; padding-bottom: 12px; margin-bottom: 18px; display: flex; justify-content: space-between; align-items: flex-end; }
+    .p-title { font-size: 26px; font-weight: 500; letter-spacing: .08em; text-transform: uppercase; }
+    .p-sub { font-size: 10px; color: #777; letter-spacing: .12em; text-transform: uppercase; margin-top: 2px; }
+    .p-meta { text-align: right; font-size: 11px; color: #555; line-height: 1.9; }
+    .p-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 20px; }
+    .p-box { border: 1px solid #ddd; padding: 11px 13px; border-radius: 3px; }
+    .p-box .p-l { font-size: 9px; letter-spacing: .18em; text-transform: uppercase; color: #999; margin-bottom: 3px; }
+    .p-box .p-v { font-size: 19px; font-weight: 500; }
+    .p-exp { grid-column: 1 / -1; background: #f8f8f8; border: 2px solid #1a1a1a; }
+    .p-exp .p-v { font-size: 24px; }
+    .p-sec { margin-bottom: 20px; }
+    .p-sec-title { font-size: 9px; letter-spacing: .2em; text-transform: uppercase; color: #888; border-bottom: 1px solid #e0e0e0; padding-bottom: 4px; margin-bottom: 9px; }
+    .p-table { width: 100%; border-collapse: collapse; font-size: 11px; }
+    .p-table th { text-align: left; font-size: 9px; letter-spacing: .15em; text-transform: uppercase; color: #999; padding: 4px 7px; border-bottom: 1px solid #e0e0e0; }
+    .p-table td { padding: 5px 7px; border-bottom: 1px solid #f0f0f0; }
+    .p-table tr:last-child td { border-bottom: none; }
+    .p-notes { background: #f8f8f8; border: 1px solid #ddd; border-radius: 3px; padding: 10px 13px; font-size: 11px; line-height: 1.7; white-space: pre-wrap; margin-bottom: 20px; }
+    .p-safe-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 20px; }
+    .p-safe-box { border: 1px solid #ddd; padding: 8px 11px; border-radius: 3px; font-size: 11px; }
+    .p-safe-box .p-l { font-size: 9px; letter-spacing: .15em; text-transform: uppercase; color: #999; margin-bottom: 2px; }
+    .p-foot { border-top: 1px solid #e0e0e0; margin-top: 22px; padding-top: 12px; display: flex; justify-content: space-between; font-size: 10px; color: #aaa; }
+    .p-sig { border-top: 1px solid #1a1a1a; width: 190px; margin-top: 28px; padding-top: 4px; font-size: 10px; color: #888; letter-spacing: .1em; }
+  }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- HEADER -->
+  <div class="header">
+    <div class="header-left">
+      <div class="eyebrow">Casino Bartender</div>
+      <div class="shift-title">TILL TRACKER</div>
+    </div>
+    <div class="header-right">
+      <div class="header-inputs">
+        <input type="text" id="bartenderName" placeholder="Your name" style="width:120px;font-size:0.78rem;padding:5px 9px">
+        <select id="shiftLabel" style="width:90px;font-size:0.78rem;padding:5px 9px">
+          <option>Day</option>
+          <option>Evening</option>
+          <option>Night</option>
+          <option>Swing</option>
+        </select>
+        <input type="date" id="shiftDate" style="width:145px;font-size:0.78rem;padding:5px 9px">
+      </div>
+      <div class="header-btns">
+        <button class="btn btn-print" onclick="printSummary()">🖨 Print / PDF</button>
+        <button class="btn btn-danger btn-sm" onclick="resetAll()">New Shift</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- TABS -->
+  <div class="tabs">
+    <button class="tab-btn active" id="tab-summary" onclick="showTab('summary')">Summary</button>
+    <button class="tab-btn" id="tab-payouts" onclick="showTab('payouts')">Payouts <span class="badge" id="badge-payouts" style="display:none"></span></button>
+    <button class="tab-btn" id="tab-safe" onclick="showTab('safe')">Safe <span class="badge" id="badge-safe" style="display:none"></span></button>
+    <button class="tab-btn" id="tab-notes" onclick="showTab('notes')">Notes</button>
+  </div>
+
+  <!-- CONTENT -->
+  <div class="content">
+
+    <!-- SUMMARY TAB -->
+    <div class="tab-panel active" id="panel-summary">
+      <div class="card" id="till-set-card">
+        <label class="lbl">Starting Till Amount</label>
+        <div class="row">
+          <div class="field"><input type="number" id="tillStartInput" placeholder="0.00" onkeydown="if(event.key==='Enter')setTill()"></div>
+          <button class="btn" onclick="setTill()">Set</button>
+        </div>
+      </div>
+      <div class="card" id="till-display-card" style="display:none">
+        <label class="lbl">Starting Till Amount</label>
+        <div class="till-display">
+          <div class="big-num" id="tillDisplayVal">$0.00</div>
+          <button class="btn btn-ghost btn-sm" onclick="editTill()">Edit</button>
+        </div>
+      </div>
+
+      <div class="stat-grid">
+        <div class="stat-box">
+          <div class="lbl">Total Payouts</div>
+          <div class="big-num red" id="statPayouts">$0.00</div>
+          <div class="stat-sub" id="statPayoutsCount">0 tickets</div>
+        </div>
+        <div class="stat-box">
+          <div class="lbl">Safe Pulls</div>
+          <div class="big-num green" id="statPulls">$0.00</div>
+          <div class="stat-sub" id="statPullsCount">0 pulls</div>
+        </div>
+      </div>
+
+      <div class="expected-card">
+        <label class="lbl">Expected Till at End of Shift</label>
+        <div class="big-num" id="expectedTill" style="color:#f0c040">$0.00</div>
+        <hr class="divider">
+        <div class="calc-row"><span>Starting till</span><span class="gold" id="calcStart">$0.00</span></div>
+        <div class="calc-row"><span>− Payouts</span><span class="red" id="calcPayouts">($0.00)</span></div>
+        <div class="calc-row"><span>+ Safe pulls</span><span class="green" id="calcPulls">$0.00</span></div>
+      </div>
+
+      <div id="recentSection" style="display:none">
+        <div class="card" style="padding:10px 16px">
+          <label class="lbl" style="margin-bottom:8px">Recent Activity</label>
+          <div id="recentList"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PAYOUTS TAB -->
+    <div class="tab-panel" id="panel-payouts">
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:9px">
+          <label class="lbl" style="margin-bottom:0">Enter Payout Ticket</label>
+          <span style="font-family:'Bebas Neue',sans-serif;font-size:1.1rem;color:#f0c040;letter-spacing:0.08em">TICKET #<span id="nextTicketNum">1</span></span>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:9px">
+          <div class="row">
+            <div class="field"><input type="number" id="payoutAmt" placeholder="Amount" onkeydown="if(event.key==='Enter')addPayout()"></div>
+            <button class="btn" onclick="addPayout()">Add</button>
+          </div>
+          <input type="text" id="payoutDesc" placeholder="Description (optional — machine, game, etc.)" onkeydown="if(event.key==='Enter')addPayout()">
+        </div>
+      </div>
+      <div class="section-hd">
+        <span class="lbl" id="payoutsHeading">Payout Log — 0 tickets</span>
+        <span style="font-family:'Bebas Neue',sans-serif;font-size:1.25rem" class="red" id="payoutsTotal">−$0.00</span>
+      </div>
+      <div id="payoutsList"><div class="empty">No payouts logged yet</div></div>
+    </div>
+
+    <!-- SAFE TAB -->
+    <div class="tab-panel" id="panel-safe">
+
+      <!-- Main Safe -->
+      <div class="card" style="margin-bottom:13px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+          <div class="safe-section-title" style="margin-bottom:0;border:none">Main Safe</div>
+          <span style="font-size:0.62rem;color:#4a3f20;letter-spacing:0.1em">TAP TO ADJUST</span>
+        </div>
+        <div id="mainSafeStatusList"></div>
+      </div>
+
+      <!-- Backup Safe -->
+      <div class="card backup-card" style="margin-bottom:13px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+          <div class="safe-section-title" style="margin-bottom:0;border:none;color:#5090c0">Backup Safe</div>
+          <span style="font-size:0.62rem;color:#2a3a50;letter-spacing:0.1em">TAP TO ADJUST</span>
+        </div>
+        <div id="backupSafeStatusList"></div>
+      </div>
+
+      <!-- Pull form -->
+      <div class="card">
+        <label class="lbl">Add Safe Pull to Till</label>
+        <div style="display:flex;flex-direction:column;gap:9px">
+          <div class="row">
+            <div class="field">
+              <label class="lbl">Denomination</label>
+              <select id="pullType" onchange="updateBundleHint()">
+                <option value="bigBills">Big Bills (100s & 50s)</option>
+                <option value="twenties" selected>20s</option>
+                <option value="fives">5s</option>
+                <option value="ones">1s</option>
+              </select>
+            </div>
+            <div class="field">
+              <label class="lbl">Source</label>
+              <select id="pullSource" onchange="updateBundleHint()">
+                <option value="main">Main Safe</option>
+                <option value="backup">Backup Safe</option>
+              </select>
+            </div>
+          </div>
+          <div>
+            <label class="lbl" id="bundleHintLabel">Bundle Amount (default: $500.00)</label>
+            <input type="number" id="pullCustom" placeholder="500 (default)">
+          </div>
+          <button class="btn" onclick="addSafePull()">Add Pull to Till</button>
+        </div>
+      </div>
+
+      <!-- Pull log -->
+      <div class="section-hd">
+        <span class="lbl" id="pullsHeading">Pull Log — 0 pulls</span>
+        <span style="font-family:'Bebas Neue',sans-serif;font-size:1.25rem" class="green" id="pullsTotal">+$0.00</span>
+      </div>
+      <div id="pullsList"><div class="empty">No pulls logged yet</div></div>
+    </div>
+
+    <!-- NOTES TAB -->
+    <div class="tab-panel" id="panel-notes">
+      <div class="card notes-card">
+        <label class="lbl" style="color:#4a7a4a">Shift Notes</label>
+        <textarea id="notesInput" placeholder="Anything worth documenting — unusual payouts, safe discrepancies, incidents, manager instructions, etc."></textarea>
+        <div style="font-size:0.65rem;color:#2a4a2a;margin-top:6px;letter-spacing:0.08em">AUTO-SAVED AS YOU TYPE · PRINTS WITH SUMMARY</div>
+      </div>
+
+      <div class="card" style="background:#0a100a;border-color:#1a2a1a">
+        <label class="lbl" style="color:#4a7a4a;margin-bottom:10px">Audit Checklist</label>
+        <div id="auditChecklist"></div>
+      </div>
+    </div>
+
+  </div><!-- /content -->
+</div><!-- /app -->
+
+<!-- PRINT AREA -->
+<div id="printArea">
+  <div class="p-hdr">
+    <div>
+      <div class="p-title">Shift Summary</div>
+      <div class="p-sub">Casino Bar · Till Tracker</div>
+    </div>
+    <div class="p-meta">
+      <div><strong id="p-name"></strong></div>
+      <div id="p-shift"></div>
+      <div id="p-date"></div>
+      <div id="p-printed"></div>
+    </div>
+  </div>
+
+  <div class="p-grid">
+    <div class="p-box"><div class="p-l">Starting Till</div><div class="p-v" id="p-start"></div></div>
+    <div class="p-box"><div class="p-l">Total Payouts</div><div class="p-v" style="color:#c00" id="p-payouts"></div></div>
+    <div class="p-box"><div class="p-l">Safe Pulls</div><div class="p-v" style="color:#070" id="p-pulls"></div></div>
+    <div class="p-box p-exp"><div class="p-l">Expected Till at End of Shift</div><div class="p-v" id="p-expected"></div></div>
+  </div>
+
+  <div class="p-sec">
+    <div class="p-sec-title">Safe Starting Balances</div>
+    <div class="p-safe-grid" id="p-safe-grid"></div>
+  </div>
+
+  <div class="p-sec">
+    <div class="p-sec-title" id="p-payout-title"></div>
+    <table class="p-table">
+      <thead><tr><th>Ticket #</th><th>Description</th><th>Time</th><th>Amount</th></tr></thead>
+      <tbody id="p-payout-rows"></tbody>
+    </table>
+  </div>
+
+  <div class="p-sec">
+    <div class="p-sec-title" id="p-pull-title"></div>
+    <table class="p-table">
+      <thead><tr><th>#</th><th>Description</th><th>Source</th><th>Time</th><th>Amount</th></tr></thead>
+      <tbody id="p-pull-rows"></tbody>
+    </table>
+  </div>
+
+  <div id="p-notes-sec" class="p-sec" style="display:none">
+    <div class="p-sec-title">Shift Notes</div>
+    <div class="p-notes" id="p-notes-content"></div>
+  </div>
+
+  <div style="display:flex;gap:50px;margin-top:28px">
+    <div class="p-sig">Bartender Signature</div>
+    <div class="p-sig">Manager Signature</div>
+  </div>
+
+  <div class="p-foot">
+    <span>Casino Bar Till Tracker</span>
+    <span id="p-generated"></span>
+  </div>
+</div>
+
+<script>
+const SAFE_KEYS = ['bigBills','twenties','fives','ones'];
+const SAFE_CFG = {
+  bigBills: { label: "Big Bills (100s & 50s)", defaultAmt: 2000, bundleAmt: 500 },
+  twenties: { label: "20s", defaultAmt: 3500, bundleAmt: 500 },
+  fives:    { label: "5s",  defaultAmt: 700,  bundleAmt: 100 },
+  ones:     { label: "1s",  defaultAmt: 100,  bundleAmt: 50  },
+};
+
+const STORAGE_KEY = 'tillTrackerState_v2';
+let state = freshState();
+
+function freshState() {
+  const main = {}, mainStart = {}, backup = {}, backupStart = {};
+  for (const k of SAFE_KEYS) {
+    main[k] = SAFE_CFG[k].defaultAmt;   mainStart[k] = SAFE_CFG[k].defaultAmt;
+    backup[k] = SAFE_CFG[k].defaultAmt; backupStart[k] = SAFE_CFG[k].defaultAmt;
+  }
+  return {
+    tillStart: 0, tillSet: false,
+    payouts: [], safePulls: [],
+    mainSafe: main, mainSafeStart: mainStart,
+    backupSafe: backup, backupSafeStart: backupStart,
+    editingSafe: null,   // { which: 'main'|'backup', key }
+    shiftDateVal: todayStr(),
+    bartenderName: '', shiftLabel: 'Day',
+    nextTicketNum: 1,
+    notes: ''
+  };
+}
+
+function todayStr() {
+  const d = new Date();
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+}
+
+// ─── PERSISTENCE ────────────────────────────────────────
+function saveState() {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...state, editingSafe: null }));
+  } catch(e) {}
+}
+function loadState() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return null;
+    const p = JSON.parse(raw);
+    p.editingSafe = null;
+    // migrate old state that doesn't have backup safe
+    if (!p.backupSafe) {
+      p.backupSafe = {}; p.backupSafeStart = {};
+      for (const k of SAFE_KEYS) { p.backupSafe[k] = SAFE_CFG[k].defaultAmt; p.backupSafeStart[k] = SAFE_CFG[k].defaultAmt; }
+    }
+    if (!p.notes) p.notes = '';
+    if (!p.shiftDateVal) p.shiftDateVal = todayStr();
+    if (!p.nextTicketNum) {
+      let n = 1;
+      (p.payouts||[]).forEach(x => { if (!x.ticketNum) x.ticketNum = n; n++; });
+      p.nextTicketNum = n;
+    }
+    // migrate old safeAmounts structure
+    if (p.safeAmounts && !p.mainSafe) {
+      p.mainSafe = p.safeAmounts; p.mainSafeStart = p.safeStart || p.safeAmounts;
+      delete p.safeAmounts; delete p.safeStart;
+    }
+    return p;
+  } catch(e) { return null; }
+}
+function clearSavedState() { try { localStorage.removeItem(STORAGE_KEY); } catch(e) {} }
+
+// ─── HELPERS ────────────────────────────────────────────
+function fmt(n) { return "$" + Number(n||0).toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2}); }
+function fmtDateStr(s) {
+  if (!s) return '';
+  const [y,m,d] = s.split('-');
+  return new Date(y, m-1, d).toLocaleDateString("en-US",{weekday:"long",year:"numeric",month:"long",day:"numeric"});
+}
+function fmtTime(d) { return d.toLocaleTimeString("en-US",{hour:"2-digit",minute:"2-digit"}); }
+function totalPayouts() { return state.payouts.reduce((s,p)=>s+p.amount,0); }
+function totalPulls()   { return state.safePulls.reduce((s,p)=>s+p.amount,0); }
+function expectedTill() { return state.tillStart - totalPayouts() + totalPulls(); }
+function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+// ─── TABS ───────────────────────────────────────────────
+function showTab(name) {
+  document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('panel-'+name).classList.add('active');
+  document.getElementById('tab-'+name).classList.add('active');
+}
+
+// ─── TILL ───────────────────────────────────────────────
+function setTill() {
+  const v = parseFloat(document.getElementById('tillStartInput').value);
+  if (isNaN(v) || v < 0) return;
+  state.tillStart = v; state.tillSet = true; render();
+}
+function editTill() {
+  state.tillSet = false; render();
+  document.getElementById('tillStartInput').value = state.tillStart || '';
+  document.getElementById('tillStartInput').focus();
+}
+
+// ─── PAYOUTS ────────────────────────────────────────────
+function addPayout() {
+  const amtEl = document.getElementById('payoutAmt');
+  const amt = parseFloat(amtEl.value);
+  if (isNaN(amt) || amt <= 0) { amtEl.focus(); return; }
+  const desc = document.getElementById('payoutDesc').value.trim();
+  state.payouts.push({ id: Date.now(), ticketNum: state.nextTicketNum++, desc, amount: amt, time: new Date().toLocaleTimeString() });
+  amtEl.value = ''; document.getElementById('payoutDesc').value = '';
+  render(); amtEl.focus();
+}
+function removePayout(id) { state.payouts = state.payouts.filter(p=>p.id!==id); render(); }
+
+// ─── SAFE PULLS ─────────────────────────────────────────
+function updateBundleHint() {
+  const key = document.getElementById('pullType').value;
+  const src = document.getElementById('pullSource').value;
+  const def = SAFE_CFG[key].bundleAmt;
+  document.getElementById('bundleHintLabel').textContent = `Bundle Amount (default: ${fmt(def)})`;
+  document.getElementById('pullCustom').placeholder = `${def} (default)`;
+}
+function addSafePull() {
+  const key  = document.getElementById('pullType').value;
+  const src  = document.getElementById('pullSource').value;
+  const cust = parseFloat(document.getElementById('pullCustom').value);
+  const amt  = (!isNaN(cust) && cust > 0) ? cust : SAFE_CFG[key].bundleAmt;
+
+  let autoTransfer = 0;
+
+  // Normal workflow: pulls come from the Main/Front safe. If that denomination
+  // does not have enough for the requested pull, move the ENTIRE matching
+  // denomination bundle/balance from Backup/Back to Main/Front first.
+  // Example: Main 20s = $0, Backup 20s = $3,500, pull = $500 ->
+  // Backup becomes $0, Main becomes $3,500, then the $500 pull leaves Main at $3,000.
+  if (src === 'main' && (state.mainSafe[key] || 0) < amt) {
+    autoTransfer = state.backupSafe[key] || 0;
+    if (autoTransfer > 0) {
+      state.backupSafe[key] = 0;
+      state.mainSafe[key] = (state.mainSafe[key] || 0) + autoTransfer;
+    }
+  }
+
+  const safeObj = src === 'backup' ? state.backupSafe : state.mainSafe;
+
+  // Do not allow the safe balance to silently go negative. If the combined
+  // available amount is still short, leave the balances unchanged and alert.
+  if ((safeObj[key] || 0) < amt) {
+    if (autoTransfer > 0) {
+      state.mainSafe[key] -= autoTransfer;
+      state.backupSafe[key] += autoTransfer;
+    }
+    alert(`Not enough ${SAFE_CFG[key].label} available for a ${fmt(amt)} pull.`);
+    return;
+  }
+
+  safeObj[key] -= amt;
+  state.safePulls.push({
+    id: Date.now(), key, src, label: SAFE_CFG[key].label, amount: amt,
+    autoTransfer, time: new Date().toLocaleTimeString()
+  });
+  document.getElementById('pullCustom').value = '';
+  render();
+}
+function removePull(id) {
+  const p = state.safePulls.find(x=>x.id===id);
+  if (p) {
+    const safeObj = p.src === 'backup' ? state.backupSafe : state.mainSafe;
+    safeObj[p.key] = (safeObj[p.key] || 0) + p.amount;
+
+    // If this pull triggered an automatic Back -> Front transfer, undo that
+    // transfer too when the pull is deleted.
+    if (p.src === 'main' && (p.autoTransfer || 0) > 0) {
+      state.mainSafe[p.key] = Math.max(0, (state.mainSafe[p.key] || 0) - p.autoTransfer);
+      state.backupSafe[p.key] = (state.backupSafe[p.key] || 0) + p.autoTransfer;
+    }
+  }
+  state.safePulls = state.safePulls.filter(x=>x.id!==id);
+  render();
+}
+
+// ─── SAFE EDITING ───────────────────────────────────────
+function startEditSafe(which, key) {
+  state.editingSafe = { which, key }; render();
+  const inp = document.getElementById(`safeEdit-${which}-${key}`);
+  if (inp) { const safeObj = which==='backup' ? state.backupSafe : state.mainSafe; inp.value = safeObj[key]; inp.focus(); }
+}
+function confirmEditSafe(which, key) {
+  const inp = document.getElementById(`safeEdit-${which}-${key}`);
+  const v = parseFloat(inp.value);
+  if (isNaN(v) || v < 0) return;
+  if (which === 'backup') { state.backupSafe[key] = v; state.backupSafeStart[key] = v; }
+  else                    { state.mainSafe[key]   = v; state.mainSafeStart[key]   = v; }
+  state.editingSafe = null; render();
+}
+function cancelEditSafe() { state.editingSafe = null; render(); }
+
+// ─── RESET ──────────────────────────────────────────────
+function resetAll() {
+  if (!confirm("Reset all data for a new shift?")) return;
+  clearSavedState();
+  state = freshState();
+  document.getElementById('tillStartInput').value = '';
+  document.getElementById('bartenderName').value  = '';
+  document.getElementById('shiftLabel').value     = 'Day';
+  document.getElementById('shiftDate').value      = todayStr();
+  document.getElementById('notesInput').value     = '';
+  render(); saveState();
+}
+
+// ─── PRINT ──────────────────────────────────────────────
+function printSummary() {
+  const now = new Date();
+  const tp = totalPayouts(), tpu = totalPulls(), et = expectedTill();
+
+  document.getElementById('p-name').textContent    = state.bartenderName || '—';
+  document.getElementById('p-shift').textContent   = state.shiftLabel + ' Shift';
+  document.getElementById('p-date').textContent    = fmtDateStr(state.shiftDateVal);
+  document.getElementById('p-printed').textContent = 'Printed: ' + fmtTime(now);
+  document.getElementById('p-start').textContent   = fmt(state.tillStart);
+  document.getElementById('p-payouts').textContent = '−' + fmt(tp);
+  document.getElementById('p-pulls').textContent   = '+' + fmt(tpu);
+  document.getElementById('p-expected').textContent = fmt(et);
+
+  // Safe starting balances grid
+  const safeRows = SAFE_KEYS.map(k => `
+    <div class="p-safe-box">
+      <div class="p-l">${SAFE_CFG[k].label}</div>
+      <div>Main: <strong>${fmt(state.mainSafeStart[k])}</strong> &nbsp; Backup: <strong>${fmt(state.backupSafeStart[k])}</strong></div>
+    </div>`).join('');
+  document.getElementById('p-safe-grid').innerHTML = safeRows;
+
+  document.getElementById('p-payout-title').textContent = `Payout Log (${state.payouts.length} ticket${state.payouts.length!==1?'s':''})`;
+  document.getElementById('p-pull-title').textContent   = `Safe Pull Log (${state.safePulls.length} pull${state.safePulls.length!==1?'s':''})`;
+
+  document.getElementById('p-payout-rows').innerHTML = state.payouts.length
+    ? state.payouts.map(p=>`<tr><td>#${p.ticketNum}</td><td>${esc(p.desc||'—')}</td><td>${p.time}</td><td style="color:#c00;font-weight:600">−${fmt(p.amount)}</td></tr>`).join('')
+    : `<tr><td colspan="4" style="color:#bbb;font-style:italic;padding:8px">None recorded</td></tr>`;
+
+  document.getElementById('p-pull-rows').innerHTML = state.safePulls.length
+    ? state.safePulls.map((p,i)=>`<tr><td>${i+1}</td><td>${esc(p.label)}</td><td>${p.src==='backup'?'Backup Safe':'Main Safe'}</td><td>${p.time}</td><td style="color:#070;font-weight:600">+${fmt(p.amount)}</td></tr>`).join('')
+    : `<tr><td colspan="5" style="color:#bbb;font-style:italic;padding:8px">None recorded</td></tr>`;
+
+  const notes = state.notes.trim();
+  const notesSec = document.getElementById('p-notes-sec');
+  if (notes) {
+    document.getElementById('p-notes-content').textContent = notes;
+    notesSec.style.display = '';
+  } else { notesSec.style.display = 'none'; }
+
+  document.getElementById('p-generated').textContent = `Generated ${fmtDateStr(state.shiftDateVal)} at ${fmtTime(now)}`;
+  window.print();
+}
+
+// ─── SAFE STATUS RENDERER ───────────────────────────────
+function renderSafeSection(which) {
+  const safeObj   = which === 'backup' ? state.backupSafe      : state.mainSafe;
+  const startObj  = which === 'backup' ? state.backupSafeStart : state.mainSafeStart;
+  const isBackup  = which === 'backup';
+  return SAFE_KEYS.map(key => {
+    const cur   = safeObj[key];
+    const start = startObj[key];
+    const pct   = start > 0 ? Math.max(0, Math.min(100, (cur/start)*100)) : 100;
+    const low   = cur < start * 0.2;
+    const barColor = low
+      ? 'linear-gradient(90deg,#8b3014,#c07830)'
+      : isBackup ? 'linear-gradient(90deg,#1a4060,#5090c0)' : 'linear-gradient(90deg,#8b6914,#f0c040)';
+    const editing = state.editingSafe && state.editingSafe.which === which && state.editingSafe.key === key;
+    return `
+      <div class="safe-row">
+        <div class="safe-label-row">
+          <span class="safe-label" style="${isBackup?'color:#5090c0':''}">${SAFE_CFG[key].label}</span>
+          ${editing ? `
+            <div class="safe-edit-row">
+              <input type="number" id="safeEdit-${which}-${key}" style="width:100px;padding:4px 8px;font-size:0.82rem"
+                onkeydown="if(event.key==='Enter')confirmEditSafe('${which}','${key}');if(event.key==='Escape')cancelEditSafe()">
+              <button class="btn btn-xs" onclick="confirmEditSafe('${which}','${key}')">✓</button>
+              <button class="btn btn-danger btn-xs" onclick="cancelEditSafe()">✕</button>
+            </div>` : `
+            <button class="safe-edit-btn" onclick="startEditSafe('${which}','${key}')" title="Tap to adjust"
+              style="${isBackup?'color:#406080;border-color:#1a3050':''}">
+              ${fmt(cur)}<span class="edit-icon">✎</span>
+            </button>`}
+        </div>
+        <div class="safe-bar"><div class="safe-fill" style="width:${pct}%;background:${barColor}"></div></div>
+        <div class="safe-foot">
+          <span>Start of shift: ${fmt(start)}</span>
+          ${low?'<span class="warn">⚠ Low</span>':''}
+        </div>
+      </div>`;
+  }).join('');
+}
+
+// ─── AUDIT CHECKLIST ────────────────────────────────────
+function renderAuditChecklist() {
+  const checks = [
+    { label: 'Shift date entered',           ok: !!state.shiftDateVal },
+    { label: 'Bartender name entered',       ok: !!state.bartenderName.trim() },
+    { label: 'Starting till amount set',     ok: state.tillSet },
+    { label: 'Main safe balances confirmed', ok: Object.values(state.mainSafeStart).some(v=>v>0) },
+    { label: 'Backup safe balances confirmed', ok: Object.values(state.backupSafeStart).some(v=>v>0) },
+    { label: 'All payout tickets logged',    ok: state.payouts.length > 0 },
+    { label: 'Safe pulls documented',        ok: state.safePulls.length > 0 || totalPulls() === 0 },
+  ];
+  return checks.map(c => `
+    <div style="display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid #1a2a1a;font-size:0.82rem">
+      <span style="font-size:1rem">${c.ok ? '✅' : '⬜'}</span>
+      <span style="color:${c.ok?'#50a050':'#4a5a4a'}">${c.label}</span>
+    </div>`).join('');
+}
+
+// ─── RENDER ─────────────────────────────────────────────
+function render() {
+  const tp  = totalPayouts(), tpu = totalPulls(), et = expectedTill();
+  const pc  = state.payouts.length, sc = state.safePulls.length;
+
+  // Till
+  const isSet = state.tillSet;
+  document.getElementById('till-set-card').style.display     = isSet ? 'none' : '';
+  document.getElementById('till-display-card').style.display = isSet ? ''     : 'none';
+  if (isSet) document.getElementById('tillDisplayVal').textContent = fmt(state.tillStart);
+
+  // Stats
+  document.getElementById('statPayouts').textContent      = fmt(tp);
+  document.getElementById('statPayoutsCount').textContent = pc + ' ticket' + (pc!==1?'s':'');
+  document.getElementById('statPulls').textContent        = fmt(tpu);
+  document.getElementById('statPullsCount').textContent   = sc + ' pull' + (sc!==1?'s':'');
+  document.getElementById('expectedTill').textContent     = fmt(et);
+  document.getElementById('expectedTill').style.color     = et >= 0 ? '#f0c040' : '#c05050';
+  document.getElementById('calcStart').textContent        = fmt(state.tillStart);
+  document.getElementById('calcPayouts').textContent      = '(' + fmt(tp) + ')';
+  document.getElementById('calcPulls').textContent        = fmt(tpu);
+
+  // Badges
+  const bp = document.getElementById('badge-payouts'); bp.textContent = pc; bp.style.display = pc ? '' : 'none';
+  const bs = document.getElementById('badge-safe');    bs.textContent = sc; bs.style.display = sc ? '' : 'none';
+
+  // Recent activity
+  const all = [
+    ...state.payouts.map(p=>({...p,type:'payout'})),
+    ...state.safePulls.map(p=>({...p,type:'pull'}))
+  ].sort((a,b)=>b.id-a.id).slice(0,6);
+  const rs = document.getElementById('recentSection');
+  rs.style.display = all.length ? '' : 'none';
+  if (all.length) {
+    document.getElementById('recentList').innerHTML = all.map(item=>`
+      <div class="item">
+        <div>
+          <span class="chip ${item.type==='pull'&&item.src==='backup'?'chip-blue':''}">${item.type==='payout'?'TICKET #'+item.ticketNum:item.src==='backup'?'BACKUP PULL':'MAIN PULL'}</span>
+          <span style="margin-left:6px">${esc(item.type==='payout'?(item.desc||''):(item.label||''))}</span>
+        </div>
+        <span style="color:${item.type==='payout'?'#c05050':'#50c080'};font-family:'Bebas Neue',sans-serif;font-size:1rem;white-space:nowrap;margin-left:8px">
+          ${item.type==='payout'?'−':'+'}${fmt(item.amount)}
+        </span>
+      </div>`).join('');
+  }
+
+  // Payouts list
+  document.getElementById('payoutsHeading').textContent = `Payout Log — ${pc} ticket${pc!==1?'s':''}`;
+  document.getElementById('payoutsTotal').textContent   = '−' + fmt(tp);
+  document.getElementById('nextTicketNum').textContent  = state.nextTicketNum;
+  document.getElementById('payoutsList').innerHTML = pc === 0
+    ? '<div class="empty">No payouts logged yet</div>'
+    : `<div class="card" style="padding:8px 16px">${state.payouts.map(p=>`
+        <div class="item">
+          <div>
+            <div><span class="chip">#${p.ticketNum}</span>${p.desc?` <span style="margin-left:6px">${esc(p.desc)}</span>`:''}</div>
+            <div class="item-meta">${p.time}</div>
+          </div>
+          <div class="item-right">
+            <span class="red" style="font-family:'Bebas Neue',sans-serif;font-size:1.05rem">−${fmt(p.amount)}</span>
+            <button class="btn btn-danger btn-xs" onclick="removePayout(${p.id})">✕</button>
+          </div>
+        </div>`).join('')}</div>`;
+
+  // Safe status
+  document.getElementById('mainSafeStatusList').innerHTML   = renderSafeSection('main');
+  document.getElementById('backupSafeStatusList').innerHTML = renderSafeSection('backup');
+
+  // Re-focus safe edit input
+  if (state.editingSafe) {
+    const { which, key } = state.editingSafe;
+    const inp = document.getElementById(`safeEdit-${which}-${key}`);
+    if (inp && document.activeElement !== inp) {
+      const safeObj = which==='backup' ? state.backupSafe : state.mainSafe;
+      inp.value = safeObj[key]; inp.focus();
+    }
+  }
+
+  // Pulls list
+  document.getElementById('pullsHeading').textContent = `Pull Log — ${sc} pull${sc!==1?'s':''}`;
+  document.getElementById('pullsTotal').textContent   = '+' + fmt(tpu);
+  document.getElementById('pullsList').innerHTML = sc === 0
+    ? '<div class="empty">No pulls logged yet</div>'
+    : `<div class="card" style="padding:8px 16px">${state.safePulls.map((p,i)=>`
+        <div class="item">
+          <div>
+            <div><span class="chip ${p.src==='backup'?'chip-blue':''}">${p.src==='backup'?'BACKUP':'MAIN'}</span> <span style="margin-left:6px">${esc(p.label)}</span></div>
+            <div class="item-meta">#${i+1} · ${p.time}</div>
+          </div>
+          <div class="item-right">
+            <span class="green" style="font-family:'Bebas Neue',sans-serif;font-size:1.05rem">+${fmt(p.amount)}</span>
+            <button class="btn btn-danger btn-xs" onclick="removePull(${p.id})">✕</button>
+          </div>
+        </div>`).join('')}</div>`;
+
+  // Audit checklist
+  document.getElementById('auditChecklist').innerHTML = renderAuditChecklist();
+
+  saveState();
+}
+
+// ─── INIT ───────────────────────────────────────────────
+(function init() {
+  const saved = loadState();
+  if (saved) {
+    state = saved;
+    document.getElementById('bartenderName').value = state.bartenderName || '';
+    document.getElementById('shiftLabel').value    = state.shiftLabel    || 'Day';
+    document.getElementById('shiftDate').value     = state.shiftDateVal  || todayStr();
+    document.getElementById('notesInput').value    = state.notes         || '';
+    if (state.tillSet) document.getElementById('tillStartInput').value = state.tillStart;
+  } else {
+    document.getElementById('shiftDate').value = todayStr();
+  }
+
+  document.getElementById('bartenderName').addEventListener('input', e => { state.bartenderName = e.target.value; saveState(); render(); });
+  document.getElementById('shiftLabel').addEventListener('change',  e => { state.shiftLabel    = e.target.value; saveState(); });
+  document.getElementById('shiftDate').addEventListener('change',   e => { state.shiftDateVal  = e.target.value; saveState(); });
+  document.getElementById('notesInput').addEventListener('input',   e => { state.notes         = e.target.value; saveState(); render(); });
+
+  render();
+  updateBundleHint();
+})();
+</script>
+</body>
+</html>
